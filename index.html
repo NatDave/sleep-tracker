@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Multi-User Sleep Tracker</title>
+  <!-- Link your external stylesheet -->
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- Include Chart.js from a CDN so we can use it in script.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>Multi-User Sleep Tracker</h1>
+
+  <!-- LOGIN FORM -->
+  <div id="loginForm">
+    <h2>Log In</h2>
+    <div class="form-group">
+      <label for="usernameInput">Username</label>
+      <input type="text" id="usernameInput" placeholder="Enter username..." required />
+    </div>
+    <button id="loginBtn" class="btn">Log In</button>
+  </div>
+
+  <!-- MAIN APP (hidden until user logs in) -->
+  <div id="appSection" class="hidden">
+    <h2 id="welcomeMsg"></h2>
+
+    <!-- ADD NEW ENTRY FORM -->
+    <form id="addForm">
+      <div class="form-group">
+        <label for="startDate">Sleep Start Date</label>
+        <input type="date" id="startDate" required />
+      </div>
+      <div class="form-group">
+        <label for="startTime">Sleep Start Time</label>
+        <input type="time" id="startTime" required />
+      </div>
+      <div class="form-group">
+        <label for="endDate">Sleep End Date</label>
+        <input type="date" id="endDate" required />
+      </div>
+      <div class="form-group">
+        <label for="endTime">Sleep End Time</label>
+        <input type="time" id="endTime" required />
+      </div>
+      <div class="form-group">
+        <label for="comments">Comments</label>
+        <input type="text" id="comments" placeholder="Optional" />
+      </div>
+      <button type="submit" class="btn">Add Entry</button>
+    </form>
+
+    <!-- EDIT SECTION (hidden by default) -->
+    <div id="editSection">
+      <h2>Edit Entry</h2>
+      <form id="editForm">
+        <div class="form-group">
+          <label for="editStartDate">Sleep Start Date</label>
+          <input type="date" id="editStartDate" required />
+        </div>
+        <div class="form-group">
+          <label for="editStartTime">Sleep Start Time</label>
+          <input type="time" id="editStartTime" required />
+        </div>
+        <div class="form-group">
+          <label for="editEndDate">Sleep End Date</label>
+          <input type="date" id="editEndDate" required />
+        </div>
+        <div class="form-group">
+          <label for="editEndTime">Sleep End Time</label>
+          <input type="time" id="editEndTime" required />
+        </div>
+        <div class="form-group">
+          <label for="editComments">Comments</label>
+          <input type="text" id="editComments" placeholder="Optional" />
+        </div>
+        <div class="action-btns">
+          <button type="submit" class="btn">Save Changes</button>
+          <button type="button" class="btn" style="background:#6c757d;" onclick="cancelEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- TABLE OF SLEEP ENTRIES -->
+    <table id="sleepTable">
+      <thead>
+        <tr>
+          <th>Sleep Start</th>
+          <th>Sleep End</th>
+          <th>Duration (hrs)</th>
+          <th>Comments</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- EXPORT / IMPORT BUTTONS -->
+    <div style="margin-bottom: 30px;">
+      <button class="btn" onclick="exportData()">Export Data</button>
+      <input type="file" id="importFile" style="display:none" accept=".json" onchange="importData(event)" />
+      <button class="btn" onclick="document.getElementById('importFile').click()">Import Data</button>
+    </div>
+
+    <!-- CHART SECTION -->
+    <h2>Daily Sleep Chart</h2>
+    <div id="chartContainer">
+      <canvas id="sleepChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Link your external JavaScript at the bottom of the body -->
+  <script src="script.js"></script>
+</body>
+</html>
