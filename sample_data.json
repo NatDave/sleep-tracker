@@ -1,0 +1,155 @@
+[
+  {
+    "id": 1001,
+    "startDate": "2025-01-01",
+    "startTime": "23:30",
+    "endDate": "2025-01-02",
+    "endTime": "07:00",
+    "duration": 7.5,
+    "comments": "Went to bed after a busy day"
+  },
+  {
+    "id": 1002,
+    "startDate": "2025-01-02",
+    "startTime": "14:00",
+    "endDate": "2025-01-02",
+    "endTime": "14:45",
+    "duration": 0.75,
+    "comments": "Afternoon nap"
+  },
+  {
+    "id": 1003,
+    "startDate": "2025-01-03",
+    "startTime": "01:00",
+    "endDate": "2025-01-03",
+    "endTime": "06:30",
+    "duration": 5.5,
+    "comments": "Difficulty falling asleep"
+  },
+  {
+    "id": 1004,
+    "startDate": "2025-01-03",
+    "startTime": "13:00",
+    "endDate": "2025-01-03",
+    "endTime": "13:30",
+    "duration": 0.5,
+    "comments": "Power nap"
+  },
+  {
+    "id": 1005,
+    "startDate": "2025-01-04",
+    "startTime": "00:00",
+    "endDate": "2025-01-04",
+    "endTime": "08:00",
+    "duration": 8,
+    "comments": "Friday night rest"
+  },
+  {
+    "id": 1006,
+    "startDate": "2025-01-04",
+    "startTime": "14:00",
+    "endDate": "2025-01-04",
+    "endTime": "15:00",
+    "duration": 1,
+    "comments": "Afternoon nap"
+  },
+  {
+    "id": 1007,
+    "startDate": "2025-01-05",
+    "startTime": "00:30",
+    "endDate": "2025-01-05",
+    "endTime": "08:00",
+    "duration": 7.5,
+    "comments": "Weekend sleep"
+  },
+  {
+    "id": 1008,
+    "startDate": "2025-01-05",
+    "startTime": "13:00",
+    "endDate": "2025-01-05",
+    "endTime": "14:30",
+    "duration": 1.5,
+    "comments": "Long nap"
+  },
+  {
+    "id": 1009,
+    "startDate": "2025-01-06",
+    "startTime": "23:00",
+    "endDate": "2025-01-07",
+    "endTime": "06:30",
+    "duration": 7.5,
+    "comments": "Night shift ended late"
+  },
+  {
+    "id": 1010,
+    "startDate": "2025-01-07",
+    "startTime": "13:00",
+    "endDate": "2025-01-07",
+    "endTime": "13:20",
+    "duration": 0.33,
+    "comments": "Quick 20-minute micro nap"
+  },
+  {
+    "id": 1011,
+    "startDate": "2025-01-08",
+    "startTime": "00:45",
+    "endDate": "2025-01-08",
+    "endTime": "05:30",
+    "duration": 4.75,
+    "comments": "Couldn't fall asleep until late"
+  },
+  {
+    "id": 1012,
+    "startDate": "2025-01-09",
+    "startTime": "22:00",
+    "endDate": "2025-01-10",
+    "endTime": "06:00",
+    "duration": 8,
+    "comments": "Solid 8 hours"
+  },
+  {
+    "id": 1013,
+    "startDate": "2025-01-10",
+    "startTime": "13:30",
+    "endDate": "2025-01-10",
+    "endTime": "14:15",
+    "duration": 0.75,
+    "comments": "Lunch break nap"
+  },
+  {
+    "id": 1014,
+    "startDate": "2025-01-11",
+    "startTime": "01:15",
+    "endDate": "2025-01-11",
+    "endTime": "06:30",
+    "duration": 5.25,
+    "comments": "Late-night gaming"
+  },
+  {
+    "id": 1015,
+    "startDate": "2025-01-12",
+    "startTime": "00:00",
+    "endDate": "2025-01-12",
+    "endTime": "07:00",
+    "duration": 7,
+    "comments": "Slightly shorter sleep"
+  },
+  {
+    "id": 1016,
+    "startDate": "2025-01-13",
+    "startTime": "23:30",
+    "endDate": "2025-01-14",
+    "endTime": "05:30",
+    "duration": 6,
+    "comments": "Woke up early"
+  },
+  {
+    "id": 1017,
+    "startDate": "2025-01-14",
+    "startTime": "22:45",
+    "endDate": "2025-01-15",
+    "endTime": "06:15",
+    "duration": 7.5,
+    "comments": "Back to normal schedule"
+  }
+]
