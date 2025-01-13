@@ -3,19 +3,13 @@
  * 
  * Contains all JavaScript logic for multi-user 
  * sleep tracking, including local storage, 
- * chart rendering, and event handlers.
+ * chart rendering, event handlers, AND enhanced
+ * chart/stats (daily, weekly, monthly averages).
  **************************************************/
 
 // =============================
 //        GLOBAL STATE
 // =============================
-// We store data in local storage with a structure like:
-// sleepEntriesByUser = {
-//   "alice": [ { id, startDate, startTime, endDate, endTime, duration, comments }, ... ],
-//   "bob":   [ ... ],
-//   ...
-// }
-
 let sleepEntriesByUser = JSON.parse(localStorage.getItem("sleepEntriesByUser")) || {};
 let currentUser = null;    // Set after login
 let editingEntryId = null; // Track which entry is being edited
@@ -35,6 +29,10 @@ const editSection    = document.getElementById("editSection");
 const editForm       = document.getElementById("editForm");
 const sleepTableBody = document.querySelector("#sleepTable tbody");
 
+// We'll create new DOM elements to display stats
+// (You could insert these in index.html if you prefer.)
+let statsContainer; // Will be created dynamically in renderChart()
+
 // =============================
 //        LOGIN LOGIC
 // =============================
@@ -53,7 +51,7 @@ loginBtn.addEventListener("click", () => {
     sleepEntriesByUser[currentUser] = [];
   }
 
-  // Save to localStorage just to be safe
+  // Save to localStorage
   saveAllUsersData();
 
   // Hide login form, show main app
@@ -278,6 +276,120 @@ function saveAllUsersData() {
 }
 
 // =============================
+//    STATS CALCULATION
+// =============================
+function computeStats(dailyTotals) {
+  // dailyTotals = [ { date: '2025-01-01', total: 7.5 }, { date: '2025-01-02', total: 8 }, ... ]
+
+  if (!dailyTotals.length) {
+    return {
+      overallAverage: 0,
+      weeklyAverage: 0,
+      monthlyAverage: 0
+    };
+  }
+
+  // Overall average (sum of daily totals / number of days)
+  const totalSum = dailyTotals.reduce((sum, day) => sum + day.total, 0);
+  const overallAverage = totalSum / dailyTotals.length;
+
+  // Weekly average
+  // 1) Group days by calendar week (e.g. using ISOWeek or Sunday-based).
+  //    For simplicity, we'll assume Monday-based weeks using getISOWeek or a hacky approach.
+  // 2) Then compute the average for each week, and finally the average across all weeks.
+
+  const weeklyMap = {}; // key: 'YYYY-Wxx', value: sum of daily totals in that week
+  const weeklyCount = {}; // to track how many days in each week
+
+  dailyTotals.forEach(d => {
+    const dateObj = new Date(d.date);
+    const y = dateObj.getFullYear();
+    // getWeekNumber function below
+    const w = getWeekNumber(dateObj);
+
+    const weekKey = `${y}-W${w}`;
+    if (!weeklyMap[weekKey]) {
+      weeklyMap[weekKey] = 0;
+      weeklyCount[weekKey] = 0;
+    }
+    weeklyMap[weekKey] += d.total;
+    weeklyCount[weekKey] += 1;
+  });
+
+  const weeklyAverages = Object.keys(weeklyMap).map(weekKey => {
+    return weeklyMap[weekKey] / weeklyCount[weekKey];
+  });
+  // Now get the average of these weekly averages
+  const weeklyAverage = weeklyAverages.reduce((sum, val) => sum + val, 0) / weeklyAverages.length;
+
+  // Monthly average
+  // Group by 'YYYY-MM'
+  const monthlyMap = {};
+  const monthlyCount = {};
+
+  dailyTotals.forEach(d => {
+    const dateObj = new Date(d.date);
+    const y = dateObj.getFullYear();
+    const m = dateObj.getMonth() + 1; // 0-based => +1
+    const monthKey = `${y}-${String(m).padStart(2, '0')}`;
+
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = 0;
+      monthlyCount[monthKey] = 0;
+    }
+    monthlyMap[monthKey] += d.total;
+    monthlyCount[monthKey] += 1;
+  });
+
+  const monthlyAverages = Object.keys(monthlyMap).map(monthKey => {
+    return monthlyMap[monthKey] / monthlyCount[monthKey];
+  });
+  const monthlyAverage = monthlyAverages.reduce((sum, val) => sum + val, 0) / monthlyAverages.length;
+
+  return {
+    overallAverage,
+    weeklyAverage,
+    monthlyAverage
+  };
+}
+
+// A quick function to get the ISO week number
+function getWeekNumber(dateObj) {
+  // Copy date so don't modify original
+  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+  // Set to nearest Thursday: current date + 4 - current day number
+  const dayNum = d.getUTCDay() === 0 ? 7 : d.getUTCDay(); // Sunday => 7
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  // year is the year of the Thursday
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  // Calculate full weeks to nearest Thursday
+  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+  return weekNo;
+}
+
+// Compute a 7-day rolling average array
+function computeRollingAvg(dailyTotals, windowSize = 7) {
+  // dailyTotals is sorted by date. We'll produce an array of rolling avg values, same length.
+  const result = [];
+  let windowSum = 0;
+  let queue = []; // keep track of last <windowSize> totals
+
+  for (let i = 0; i < dailyTotals.length; i++) {
+    const dayVal = dailyTotals[i].total;
+    queue.push(dayVal);
+    windowSum += dayVal;
+
+    if (queue.length > windowSize) {
+      windowSum -= queue.shift(); // remove the oldest
+    }
+
+    const avg = windowSum / queue.length;
+    result.push(Number(avg.toFixed(2)));
+  }
+  return result;
+}
+
+// =============================
 //   RENDER CHART (Chart.js)
 // =============================
 function renderChart() {
@@ -296,26 +408,67 @@ function renderChart() {
 
   // Sort dates ascending
   const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
-  const dailyDurations = sortedDates.map(d => dateMap[d]);
+  const dailyTotals = sortedDates.map(d => {
+    return {
+      date: d,
+      total: dateMap[d]
+    };
+  });
 
+  const dailyDurations = dailyTotals.map(obj => obj.total);
+
+  // ---- Compute Stats & Rolling Average ----
+  const { overallAverage, weeklyAverage, monthlyAverage } = computeStats(dailyTotals);
+  const rollingAverages = computeRollingAvg(dailyTotals, 7); // 7-day window
+
+  // ---- Display Stats (in a new or existing container) ----
+  // If we've never created statsContainer, create it below the chart
+  if (!statsContainer) {
+    const chartContainer = document.getElementById("chartContainer");
+    statsContainer = document.createElement("div");
+    statsContainer.style.textAlign = "center";
+    statsContainer.style.marginTop = "20px";
+    chartContainer.appendChild(statsContainer);
+  }
+  statsContainer.innerHTML = `
+    <p><strong>Overall Avg (Daily):</strong> ${overallAverage.toFixed(2)} hrs/day</p>
+    <p><strong>Weekly Avg:</strong> ${weeklyAverage.toFixed(2)} hrs/day</p>
+    <p><strong>Monthly Avg:</strong> ${monthlyAverage.toFixed(2)} hrs/day</p>
+  `;
+
+  // ---- Render Chart.js with 2 datasets: daily totals (bars) and 7-day rolling avg (line) ----
   const ctx = document.getElementById("sleepChart").getContext("2d");
 
   // Destroy previous instance if exists
   if (chartInstance) chartInstance.destroy();
 
   chartInstance = new Chart(ctx, {
-    type: "bar",
     data: {
       labels: sortedDates,
-      datasets: [{
-        label: "Total Sleep (hrs)",
-        data: dailyDurations,
-        backgroundColor: "rgba(54, 162, 235, 0.5)",
-        borderColor: "rgba(54, 162, 235, 1)",
-        borderWidth: 1
-      }]
+      datasets: [
+        {
+          type: "bar",
+          label: "Total Sleep (hrs)",
+          data: dailyDurations,
+          backgroundColor: "rgba(54, 162, 235, 0.5)",
+          borderColor: "rgba(54, 162, 235, 1)",
+          borderWidth: 1,
+          yAxisID: "y"
+        },
+        {
+          type: "line",
+          label: "7-Day Rolling Avg (hrs)",
+          data: rollingAverages,
+          borderColor: "#ff5733",
+          backgroundColor: "rgba(255, 87, 51, 0.2)",
+          fill: false,
+          borderWidth: 2,
+          yAxisID: "y"
+        }
+      ]
     },
     options: {
+      responsive: true,
       scales: {
         y: {
           beginAtZero: true,
@@ -329,6 +482,13 @@ function renderChart() {
             display: true,
             text: "Date"
           }
+        }
+      },
+      plugins: {
+        // For example, you can enable tooltip mode, legend config, etc.
+        tooltip: {
+          mode: "index",
+          intersect: false
         }
       }
     }
@@ -381,6 +541,6 @@ function importData(event) {
   };
   reader.readAsText(file);
 
-  // Reset the input so user can import again if needed
+  // Reset input so user can import again if needed
   event.target.value = "";
 }
