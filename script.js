@@ -4,8 +4,8 @@
  * Multi-user Sleep Tracker with:
  * - Add/Edit/Delete entries (Local Storage)
  * - Daily chart + 7-day rolling average (Chart.js)
- * - Overall summary stats (daily/weekly/monthly)
- * - Separate weekly and monthly tables for each group
+ * - **Only** the overall daily average in summary stats
+ * - Separate weekly/monthly tables listing each week/month's average
  **************************************************/
 
 // =============================
@@ -293,8 +293,8 @@ function renderDailyChart(dailyTotals) {
   // 7-day rolling average
   const rollingAverages = computeRollingAvg(dailyTotals, 7);
 
-  // Compute overall/weekly/monthly average across the entire dataset
-  const { overallAverage, weeklyAverage, monthlyAverage } = computeStats(dailyTotals);
+  // Compute only the overall daily average across the entire dataset
+  const overallAvg = computeOverallDailyAvg(dailyTotals);
 
   // Create or update statsContainer
   if (!statsContainer) {
@@ -305,9 +305,7 @@ function renderDailyChart(dailyTotals) {
     chartContainer.appendChild(statsContainer);
   }
   statsContainer.innerHTML = `
-    <p><strong>Overall Avg (Daily):</strong> ${overallAverage.toFixed(2)} hrs/day</p>
-    <p><strong>Weekly Avg (across entire data):</strong> ${weeklyAverage.toFixed(2)} hrs/day</p>
-    <p><strong>Monthly Avg (across entire data):</strong> ${monthlyAverage.toFixed(2)} hrs/day</p>
+    <p><strong>Overall Avg (Daily):</strong> ${overallAvg.toFixed(2)} hrs/day</p>
   `;
 
   // Destroy existing chart if any
@@ -368,27 +366,10 @@ function renderDailyChart(dailyTotals) {
 // =============================
 //    STATS CALCULATION
 // =============================
-function computeStats(dailyTotals) {
-  // overall daily avg
+function computeOverallDailyAvg(dailyTotals) {
+  if (!dailyTotals.length) return 0;
   const totalSum = dailyTotals.reduce((sum, day) => sum + day.total, 0);
-  const overallAverage = totalSum / dailyTotals.length;
-
-  // weekly
-  const weeklyData = computeWeeklyAverages(dailyTotals);
-  // average of weekly averages
-  const weeklyAvgArr = weeklyData.map(w => w.average);
-  const weeklyAverage = weeklyAvgArr.reduce((sum, x) => sum + x, 0) / weeklyAvgArr.length;
-
-  // monthly
-  const monthlyData = computeMonthlyAverages(dailyTotals);
-  const monthlyAvgArr = monthlyData.map(m => m.average);
-  const monthlyAverage = monthlyAvgArr.reduce((sum, x) => sum + x, 0) / monthlyAvgArr.length;
-
-  return {
-    overallAverage: overallAverage || 0,
-    weeklyAverage: weeklyAverage || 0,
-    monthlyAverage: monthlyAverage || 0
-  };
+  return totalSum / dailyTotals.length;
 }
 
 function computeRollingAvg(dailyTotals, windowSize = 7) {
@@ -477,7 +458,7 @@ function computeWeeklyAverages(dailyTotals) {
     const count = weeklyCount[weekKey];
     return {
       weekKey,
-      average: sum / count // average daily hours that week
+      average: sum / count // average daily hours that specific week
     };
   });
 
@@ -571,6 +552,5 @@ function importData(event) {
   };
   reader.readAsText(file);
 
-  // Reset
   event.target.value = "";
 }
