@@ -1,10 +1,11 @@
 /***************************************************
  * script.js
  * 
- * Contains all JavaScript logic for multi-user 
- * sleep tracking, including local storage, 
- * chart rendering, event handlers, AND enhanced
- * chart/stats (daily, weekly, monthly averages).
+ * Multi-user Sleep Tracker with:
+ * - Add/Edit/Delete entries (Local Storage)
+ * - Daily chart + 7-day rolling average (Chart.js)
+ * - Overall summary stats (daily/weekly/monthly)
+ * - Separate weekly and monthly tables for each group
  **************************************************/
 
 // =============================
@@ -14,6 +15,9 @@ let sleepEntriesByUser = JSON.parse(localStorage.getItem("sleepEntriesByUser")) 
 let currentUser = null;    // Set after login
 let editingEntryId = null; // Track which entry is being edited
 let chartInstance = null;
+
+// We'll create a reference to a container for summary stats
+let statsContainer = null;
 
 // =============================
 //       DOM ELEMENTS
@@ -29,9 +33,9 @@ const editSection    = document.getElementById("editSection");
 const editForm       = document.getElementById("editForm");
 const sleepTableBody = document.querySelector("#sleepTable tbody");
 
-// We'll create new DOM elements to display stats
-// (You could insert these in index.html if you prefer.)
-let statsContainer; // Will be created dynamically in renderChart()
+// Weekly/Monthly tables (make sure these exist in index.html)
+const weeklyTbody    = document.querySelector("#weeklyTable tbody");
+const monthlyTbody   = document.querySelector("#monthlyTable tbody");
 
 // =============================
 //        LOGIN LOGIC
@@ -43,15 +47,12 @@ loginBtn.addEventListener("click", () => {
     return;
   }
 
-  // Set current user
   currentUser = username;
 
-  // If there's no entry for this user yet, create an empty array
   if (!sleepEntriesByUser[currentUser]) {
     sleepEntriesByUser[currentUser] = [];
   }
 
-  // Save to localStorage
   saveAllUsersData();
 
   // Hide login form, show main app
@@ -59,7 +60,6 @@ loginBtn.addEventListener("click", () => {
   appSectionDiv.classList.remove("hidden");
   welcomeMsg.textContent = `Welcome, ${currentUser}!`;
 
-  // Render table & chart
   renderTable();
 });
 
@@ -68,23 +68,19 @@ loginBtn.addEventListener("click", () => {
 // =============================
 addForm.addEventListener("submit", (event) => {
   event.preventDefault();
-
   if (!currentUser) {
     alert("Please log in first.");
     return;
   }
 
-  // Collect form data
   const startDate = document.getElementById("startDate").value;
   const startTime = document.getElementById("startTime").value;
   const endDate   = document.getElementById("endDate").value;
   const endTime   = document.getElementById("endTime").value;
   const comments  = document.getElementById("comments").value;
 
-  // Calculate duration
   let durationHours = calculateDuration(startDate, startTime, endDate, endTime);
 
-  // Build entry object
   const newEntry = {
     id: Date.now(),
     startDate,
@@ -95,14 +91,10 @@ addForm.addEventListener("submit", (event) => {
     comments
   };
 
-  // Add to user's array
   sleepEntriesByUser[currentUser].push(newEntry);
   saveAllUsersData();
 
-  // Clear form
   addForm.reset();
-
-  // Re-render
   renderTable();
 });
 
@@ -114,38 +106,27 @@ function editEntry(id) {
   if (!entry) return;
 
   editingEntryId = id;
-
-  // Populate edit form
   document.getElementById("editStartDate").value = entry.startDate;
   document.getElementById("editStartTime").value = entry.startTime;
   document.getElementById("editEndDate").value   = entry.endDate;
   document.getElementById("editEndTime").value   = entry.endTime;
   document.getElementById("editComments").value  = entry.comments;
 
-  // Show edit section
   editSection.style.display = "block";
 }
 
 editForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (!currentUser || editingEntryId == null) return;
 
-  if (!currentUser) {
-    alert("Please log in first.");
-    return;
-  }
-  if (editingEntryId == null) return;
-
-  // Gather updated data
   const startDate = document.getElementById("editStartDate").value;
   const startTime = document.getElementById("editStartTime").value;
   const endDate   = document.getElementById("editEndDate").value;
   const endTime   = document.getElementById("editEndTime").value;
   const comments  = document.getElementById("editComments").value;
 
-  // Recalculate duration
   let durationHours = calculateDuration(startDate, startTime, endDate, endTime);
 
-  // Find the entry in the array and update
   const arr = sleepEntriesByUser[currentUser];
   const idx = arr.findIndex(e => e.id === editingEntryId);
   if (idx > -1) {
@@ -159,11 +140,9 @@ editForm.addEventListener("submit", (event) => {
 
   saveAllUsersData();
 
-  // Hide edit section
   editSection.style.display = "none";
   editingEntryId = null;
 
-  // Re-render
   renderTable();
 });
 
@@ -187,8 +166,6 @@ function deleteEntry(id) {
 // =============================
 function renderTable() {
   if (!currentUser) return;
-
-  // Clear table
   sleepTableBody.innerHTML = "";
 
   // Sort by start date/time ascending
@@ -199,33 +176,26 @@ function renderTable() {
     return aDate - bDate;
   });
 
-  // Populate rows
   entries.forEach(entry => {
     const row = document.createElement("tr");
 
-    // Sleep Start
     const startCell = document.createElement("td");
     startCell.textContent = `${entry.startDate} ${entry.startTime}`;
     row.appendChild(startCell);
 
-    // Sleep End
     const endCell = document.createElement("td");
     endCell.textContent = `${entry.endDate} ${entry.endTime}`;
     row.appendChild(endCell);
 
-    // Duration
     const durationCell = document.createElement("td");
     durationCell.textContent = entry.duration;
     row.appendChild(durationCell);
 
-    // Comments
     const commentsCell = document.createElement("td");
     commentsCell.textContent = entry.comments || "";
     row.appendChild(commentsCell);
 
-    // Actions
     const actionsCell = document.createElement("td");
-    // Edit button
     const editBtn = document.createElement("button");
     editBtn.textContent = "Edit";
     editBtn.classList.add("btn");
@@ -234,7 +204,6 @@ function renderTable() {
     editBtn.onclick = () => editEntry(entry.id);
     actionsCell.appendChild(editBtn);
 
-    // Delete button
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Delete";
     deleteBtn.classList.add("btn");
@@ -246,8 +215,7 @@ function renderTable() {
     sleepTableBody.appendChild(row);
   });
 
-  // Update chart
-  renderChart();
+  renderChart(); // Updates the chart
 }
 
 // =============================
@@ -259,7 +227,7 @@ function calculateDuration(startDate, startTime, endDate, endTime) {
 
   let durationHours = (endDateTime - startDateTime) / (1000 * 3600);
 
-  // If negative, user likely didn't adjust the date for an overnight sleep
+  // If negative, user likely didn't set next day
   if (durationHours < 0) {
     endDateTime.setDate(endDateTime.getDate() + 1);
     durationHours = (endDateTime - startDateTime) / (1000 * 3600);
@@ -276,153 +244,59 @@ function saveAllUsersData() {
 }
 
 // =============================
-//    STATS CALCULATION
-// =============================
-function computeStats(dailyTotals) {
-  // dailyTotals = [ { date: '2025-01-01', total: 7.5 }, { date: '2025-01-02', total: 8 }, ... ]
-
-  if (!dailyTotals.length) {
-    return {
-      overallAverage: 0,
-      weeklyAverage: 0,
-      monthlyAverage: 0
-    };
-  }
-
-  // Overall average (sum of daily totals / number of days)
-  const totalSum = dailyTotals.reduce((sum, day) => sum + day.total, 0);
-  const overallAverage = totalSum / dailyTotals.length;
-
-  // Weekly average
-  // 1) Group days by calendar week (e.g. using ISOWeek or Sunday-based).
-  //    For simplicity, we'll assume Monday-based weeks using getISOWeek or a hacky approach.
-  // 2) Then compute the average for each week, and finally the average across all weeks.
-
-  const weeklyMap = {}; // key: 'YYYY-Wxx', value: sum of daily totals in that week
-  const weeklyCount = {}; // to track how many days in each week
-
-  dailyTotals.forEach(d => {
-    const dateObj = new Date(d.date);
-    const y = dateObj.getFullYear();
-    // getWeekNumber function below
-    const w = getWeekNumber(dateObj);
-
-    const weekKey = `${y}-W${w}`;
-    if (!weeklyMap[weekKey]) {
-      weeklyMap[weekKey] = 0;
-      weeklyCount[weekKey] = 0;
-    }
-    weeklyMap[weekKey] += d.total;
-    weeklyCount[weekKey] += 1;
-  });
-
-  const weeklyAverages = Object.keys(weeklyMap).map(weekKey => {
-    return weeklyMap[weekKey] / weeklyCount[weekKey];
-  });
-  // Now get the average of these weekly averages
-  const weeklyAverage = weeklyAverages.reduce((sum, val) => sum + val, 0) / weeklyAverages.length;
-
-  // Monthly average
-  // Group by 'YYYY-MM'
-  const monthlyMap = {};
-  const monthlyCount = {};
-
-  dailyTotals.forEach(d => {
-    const dateObj = new Date(d.date);
-    const y = dateObj.getFullYear();
-    const m = dateObj.getMonth() + 1; // 0-based => +1
-    const monthKey = `${y}-${String(m).padStart(2, '0')}`;
-
-    if (!monthlyMap[monthKey]) {
-      monthlyMap[monthKey] = 0;
-      monthlyCount[monthKey] = 0;
-    }
-    monthlyMap[monthKey] += d.total;
-    monthlyCount[monthKey] += 1;
-  });
-
-  const monthlyAverages = Object.keys(monthlyMap).map(monthKey => {
-    return monthlyMap[monthKey] / monthlyCount[monthKey];
-  });
-  const monthlyAverage = monthlyAverages.reduce((sum, val) => sum + val, 0) / monthlyAverages.length;
-
-  return {
-    overallAverage,
-    weeklyAverage,
-    monthlyAverage
-  };
-}
-
-// A quick function to get the ISO week number
-function getWeekNumber(dateObj) {
-  // Copy date so don't modify original
-  const d = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
-  // Set to nearest Thursday: current date + 4 - current day number
-  const dayNum = d.getUTCDay() === 0 ? 7 : d.getUTCDay(); // Sunday => 7
-  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  // year is the year of the Thursday
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  // Calculate full weeks to nearest Thursday
-  const weekNo = Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
-  return weekNo;
-}
-
-// Compute a 7-day rolling average array
-function computeRollingAvg(dailyTotals, windowSize = 7) {
-  // dailyTotals is sorted by date. We'll produce an array of rolling avg values, same length.
-  const result = [];
-  let windowSum = 0;
-  let queue = []; // keep track of last <windowSize> totals
-
-  for (let i = 0; i < dailyTotals.length; i++) {
-    const dayVal = dailyTotals[i].total;
-    queue.push(dayVal);
-    windowSum += dayVal;
-
-    if (queue.length > windowSize) {
-      windowSum -= queue.shift(); // remove the oldest
-    }
-
-    const avg = windowSum / queue.length;
-    result.push(Number(avg.toFixed(2)));
-  }
-  return result;
-}
-
-// =============================
 //   RENDER CHART (Chart.js)
+//   + compute stats, weekly/monthly tables
 // =============================
 function renderChart() {
   if (!currentUser) return;
 
   const entries = sleepEntriesByUser[currentUser];
-  // Group total daily sleep by date
+
+  // Build date -> total hours map
   const dateMap = {};
   entries.forEach(e => {
-    const dateStr = e.startDate; // "YYYY-MM-DD"
+    const dateStr = e.startDate;
     if (!dateMap[dateStr]) {
       dateMap[dateStr] = 0;
     }
     dateMap[dateStr] += e.duration;
   });
 
-  // Sort dates ascending
+  // Sort & create dailyTotals array
   const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
-  const dailyTotals = sortedDates.map(d => {
-    return {
-      date: d,
-      total: dateMap[d]
-    };
-  });
+  const dailyTotals = sortedDates.map(d => ({ date: d, total: dateMap[d] }));
 
+  // Render daily/rolling chart
+  renderDailyChart(dailyTotals);
+
+  // Compute and render weekly/monthly tables for each group
+  renderWeeklyMonthlyTables(dailyTotals);
+}
+
+// ====================================================
+//  Daily Chart + Rolling Average + Summary Stats
+// ====================================================
+function renderDailyChart(dailyTotals) {
+  const ctx = document.getElementById("sleepChart").getContext("2d");
+
+  // If no data, clear & return
+  if (!dailyTotals.length) {
+    if (chartInstance) chartInstance.destroy();
+    if (statsContainer) statsContainer.innerHTML = "";
+    return;
+  }
+
+  // Data arrays
+  const sortedDates = dailyTotals.map(obj => obj.date);
   const dailyDurations = dailyTotals.map(obj => obj.total);
 
-  // ---- Compute Stats & Rolling Average ----
-  const { overallAverage, weeklyAverage, monthlyAverage } = computeStats(dailyTotals);
-  const rollingAverages = computeRollingAvg(dailyTotals, 7); // 7-day window
+  // 7-day rolling average
+  const rollingAverages = computeRollingAvg(dailyTotals, 7);
 
-  // ---- Display Stats (in a new or existing container) ----
-  // If we've never created statsContainer, create it below the chart
+  // Compute overall/weekly/monthly average across the entire dataset
+  const { overallAverage, weeklyAverage, monthlyAverage } = computeStats(dailyTotals);
+
+  // Create or update statsContainer
   if (!statsContainer) {
     const chartContainer = document.getElementById("chartContainer");
     statsContainer = document.createElement("div");
@@ -432,14 +306,11 @@ function renderChart() {
   }
   statsContainer.innerHTML = `
     <p><strong>Overall Avg (Daily):</strong> ${overallAverage.toFixed(2)} hrs/day</p>
-    <p><strong>Weekly Avg:</strong> ${weeklyAverage.toFixed(2)} hrs/day</p>
-    <p><strong>Monthly Avg:</strong> ${monthlyAverage.toFixed(2)} hrs/day</p>
+    <p><strong>Weekly Avg (across entire data):</strong> ${weeklyAverage.toFixed(2)} hrs/day</p>
+    <p><strong>Monthly Avg (across entire data):</strong> ${monthlyAverage.toFixed(2)} hrs/day</p>
   `;
 
-  // ---- Render Chart.js with 2 datasets: daily totals (bars) and 7-day rolling avg (line) ----
-  const ctx = document.getElementById("sleepChart").getContext("2d");
-
-  // Destroy previous instance if exists
+  // Destroy existing chart if any
   if (chartInstance) chartInstance.destroy();
 
   chartInstance = new Chart(ctx, {
@@ -485,7 +356,6 @@ function renderChart() {
         }
       },
       plugins: {
-        // For example, you can enable tooltip mode, legend config, etc.
         tooltip: {
           mode: "index",
           intersect: false
@@ -496,6 +366,167 @@ function renderChart() {
 }
 
 // =============================
+//    STATS CALCULATION
+// =============================
+function computeStats(dailyTotals) {
+  // overall daily avg
+  const totalSum = dailyTotals.reduce((sum, day) => sum + day.total, 0);
+  const overallAverage = totalSum / dailyTotals.length;
+
+  // weekly
+  const weeklyData = computeWeeklyAverages(dailyTotals);
+  // average of weekly averages
+  const weeklyAvgArr = weeklyData.map(w => w.average);
+  const weeklyAverage = weeklyAvgArr.reduce((sum, x) => sum + x, 0) / weeklyAvgArr.length;
+
+  // monthly
+  const monthlyData = computeMonthlyAverages(dailyTotals);
+  const monthlyAvgArr = monthlyData.map(m => m.average);
+  const monthlyAverage = monthlyAvgArr.reduce((sum, x) => sum + x, 0) / monthlyAvgArr.length;
+
+  return {
+    overallAverage: overallAverage || 0,
+    weeklyAverage: weeklyAverage || 0,
+    monthlyAverage: monthlyAverage || 0
+  };
+}
+
+function computeRollingAvg(dailyTotals, windowSize = 7) {
+  const result = [];
+  let windowSum = 0;
+  const queue = [];
+
+  for (let i = 0; i < dailyTotals.length; i++) {
+    const dayVal = dailyTotals[i].total;
+    queue.push(dayVal);
+    windowSum += dayVal;
+
+    if (queue.length > windowSize) {
+      windowSum -= queue.shift();
+    }
+
+    const avg = windowSum / queue.length;
+    result.push(Number(avg.toFixed(2)));
+  }
+  return result;
+}
+
+// =============================
+//   WEEKLY / MONTHLY TABLES
+//   (Each group separately)
+// =============================
+function renderWeeklyMonthlyTables(dailyTotals) {
+  // Weekly
+  const weeklyData = computeWeeklyAverages(dailyTotals);
+  weeklyTbody.innerHTML = ""; // clear old rows
+
+  weeklyData.forEach(item => {
+    const row = document.createElement("tr");
+    const weekTd = document.createElement("td");
+    const avgTd = document.createElement("td");
+
+    weekTd.textContent = item.weekKey; // e.g. "2025-W02"
+    avgTd.textContent  = item.average.toFixed(2);
+
+    row.appendChild(weekTd);
+    row.appendChild(avgTd);
+    weeklyTbody.appendChild(row);
+  });
+
+  // Monthly
+  const monthlyData = computeMonthlyAverages(dailyTotals);
+  monthlyTbody.innerHTML = "";
+
+  monthlyData.forEach(item => {
+    const row = document.createElement("tr");
+    const monthTd = document.createElement("td");
+    const avgTd   = document.createElement("td");
+
+    monthTd.textContent = item.monthKey;  // e.g. "2025-01"
+    avgTd.textContent   = item.average.toFixed(2);
+
+    row.appendChild(monthTd);
+    row.appendChild(avgTd);
+    monthlyTbody.appendChild(row);
+  });
+}
+
+// =============================
+//   GROUP-BY-WEEK / MONTH LOGIC
+// =============================
+function computeWeeklyAverages(dailyTotals) {
+  const weeklyMap = {};
+  const weeklyCount = {};
+
+  dailyTotals.forEach(d => {
+    const dateObj = new Date(d.date);
+    const year = dateObj.getUTCFullYear();
+    const weekNum = getISOWeekNumber(dateObj);  
+    const weekKey = `${year}-W${String(weekNum).padStart(2, '0')}`;
+
+    if (!weeklyMap[weekKey]) {
+      weeklyMap[weekKey] = 0;
+      weeklyCount[weekKey] = 0;
+    }
+    weeklyMap[weekKey] += d.total;
+    weeklyCount[weekKey] += 1;
+  });
+
+  const result = Object.keys(weeklyMap).map(weekKey => {
+    const sum = weeklyMap[weekKey];
+    const count = weeklyCount[weekKey];
+    return {
+      weekKey,
+      average: sum / count // average daily hours that week
+    };
+  });
+
+  // Sort by weekKey
+  result.sort((a, b) => a.weekKey.localeCompare(b.weekKey));
+  return result;
+}
+
+function computeMonthlyAverages(dailyTotals) {
+  const monthlyMap = {};
+  const monthlyCount = {};
+
+  dailyTotals.forEach(d => {
+    const dateObj = new Date(d.date);
+    const y = dateObj.getUTCFullYear();
+    const m = dateObj.getUTCMonth() + 1; 
+    const monthKey = `${y}-${String(m).padStart(2, '0')}`;
+
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = 0;
+      monthlyCount[monthKey] = 0;
+    }
+    monthlyMap[monthKey] += d.total;
+    monthlyCount[monthKey] += 1;
+  });
+
+  const result = Object.keys(monthlyMap).map(monthKey => {
+    const sum = monthlyMap[monthKey];
+    const count = monthlyCount[monthKey];
+    return {
+      monthKey,
+      average: sum / count
+    };
+  });
+
+  result.sort((a, b) => a.monthKey.localeCompare(b.monthKey));
+  return result;
+}
+
+function getISOWeekNumber(dateObj) {
+  const tmp = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()));
+  const dayNum = tmp.getUTCDay() === 0 ? 7 : tmp.getUTCDay();
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((tmp - yearStart) / 86400000 + 1) / 7);
+  return weekNo;
+}
+
+// =============================
 //   EXPORT / IMPORT LOGIC
 // =============================
 function exportData() {
@@ -503,7 +534,6 @@ function exportData() {
     alert("Please log in first.");
     return;
   }
-  // Export only current user's data
   const dataToExport = sleepEntriesByUser[currentUser];
 
   const dataStr = JSON.stringify(dataToExport, null, 2);
@@ -541,6 +571,6 @@ function importData(event) {
   };
   reader.readAsText(file);
 
-  // Reset input so user can import again if needed
+  // Reset
   event.target.value = "";
 }
