@@ -4,8 +4,8 @@
  * Multi-user Sleep Tracker with:
  * - Add/Edit/Delete entries (Local Storage)
  * - Daily chart + 7-day rolling average (Chart.js)
- * - **Only** the overall daily average in summary stats
- * - Separate weekly/monthly tables listing each week/month's average
+ * - Only an Overall Daily Average displayed below chart
+ * - Separate weekly/monthly tables listing each week's or month's avg
  **************************************************/
 
 // =============================
@@ -33,7 +33,7 @@ const editSection    = document.getElementById("editSection");
 const editForm       = document.getElementById("editForm");
 const sleepTableBody = document.querySelector("#sleepTable tbody");
 
-// Weekly/Monthly tables (make sure these exist in index.html)
+// Weekly/Monthly tables (from index.html)
 const weeklyTbody    = document.querySelector("#weeklyTable tbody");
 const monthlyTbody   = document.querySelector("#monthlyTable tbody");
 
@@ -215,7 +215,7 @@ function renderTable() {
     sleepTableBody.appendChild(row);
   });
 
-  renderChart(); // Updates the chart
+  renderChart(); // Updates the chart, weekly & monthly tables
 }
 
 // =============================
@@ -245,7 +245,7 @@ function saveAllUsersData() {
 
 // =============================
 //   RENDER CHART (Chart.js)
-//   + compute stats, weekly/monthly tables
+//   + Weekly/Monthly tables
 // =============================
 function renderChart() {
   if (!currentUser) return;
@@ -266,15 +266,15 @@ function renderChart() {
   const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(a) - new Date(b));
   const dailyTotals = sortedDates.map(d => ({ date: d, total: dateMap[d] }));
 
-  // Render daily/rolling chart
+  // Render daily bar chart + rolling average line
   renderDailyChart(dailyTotals);
 
-  // Compute and render weekly/monthly tables for each group
+  // Also render weekly/monthly tables
   renderWeeklyMonthlyTables(dailyTotals);
 }
 
 // ====================================================
-//  Daily Chart + Rolling Average + Summary Stats
+//  Daily Chart + Rolling Average + Overall Daily Avg
 // ====================================================
 function renderDailyChart(dailyTotals) {
   const ctx = document.getElementById("sleepChart").getContext("2d");
@@ -293,7 +293,7 @@ function renderDailyChart(dailyTotals) {
   // 7-day rolling average
   const rollingAverages = computeRollingAvg(dailyTotals, 7);
 
-  // Compute only the overall daily average across the entire dataset
+  // Compute only the overall daily average across entire dataset
   const overallAvg = computeOverallDailyAvg(dailyTotals);
 
   // Create or update statsContainer
@@ -458,7 +458,7 @@ function computeWeeklyAverages(dailyTotals) {
     const count = weeklyCount[weekKey];
     return {
       weekKey,
-      average: sum / count // average daily hours that specific week
+      average: sum / count // average daily hours that week
     };
   });
 
