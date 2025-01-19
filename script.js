@@ -1,6 +1,6 @@
 /***************************************************
  * script.js
- * 
+ *
  * Multi-user Sleep Tracker with:
  * - Add/Edit/Delete entries (Local Storage)
  * - Daily chart + 7-day rolling average (Chart.js)
